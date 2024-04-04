@@ -12,3 +12,10 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+
+# IDE config files 
+.idea/
+
+# There are available models to ignore
+models/*.bin
+
