@@ -18,4 +18,5 @@ Cargo.lock
 
 # There are available models to ignore
 models/*.bin
-
+resources/
+upload/
