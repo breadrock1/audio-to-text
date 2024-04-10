@@ -1,13 +1,11 @@
-use crate::endpoints::{ContextData, RecognizeData};
+use crate::endpoints::helper;
 use crate::errors::WebError;
 use crate::transformer::client::{RecognizeParameters, RecognizeResponse};
+use crate::{ContextData, RecognizeData};
 
 use actix_multipart::Multipart;
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder};
-use futures_util::{StreamExt, TryStreamExt};
-use std::fs::File;
-use std::io::Write;
 
 #[get("/file")]
 pub async fn upload_file_form() -> HttpResponse {
@@ -29,7 +27,7 @@ pub async fn recognize_audio(
     payload: Multipart,
 ) -> RecognizeData<Vec<RecognizeResponse>> {
     let params = RecognizeParameters::default();
-    match extract_multiform_data(payload).await {
+    match helper::extract_multiform_data(payload).await {
         Err(err) => Err(WebError::ResponseError(err.to_string())),
         Ok(file_path) => match cxt.get_ref().recognize(file_path.as_str(), params).await {
             Ok(data) => Ok(web::Json(data)),
@@ -85,4 +83,17 @@ async fn extract_multiform_data(mut payload: Multipart) -> Result<String, anyhow
     Err(anyhow::Error::msg(
         "Failed while extracting multiform".to_string(),
     ))
+#[post("file-text")]
+pub async fn recognize_audio_full_text(
+    cxt: ContextData,
+    payload: Multipart,
+) -> RecognizeData<RecognizeResponse> {
+    let params = RecognizeParameters::default();
+    match helper::extract_multiform_data(payload).await {
+        Err(err) => Err(WebError::ResponseError(err.to_string())),
+        Ok(file_path) => match cxt.get_ref().recognize(file_path.as_str(), params).await {
+            Ok(data) => Ok(web::Json(RecognizeResponse::from(data))),
+            Err(err) => Err(WebError::ResponseError(err.to_string())),
+        },
+    }
 }
