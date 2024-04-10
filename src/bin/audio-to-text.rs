@@ -1,17 +1,18 @@
 extern crate audio_to_text;
 
-use audio_to_text::endpoints::*;
+use audio_to_text::*;
 use audio_to_text::middleware::logger;
 use audio_to_text::transformer::client::WhisperClient;
 use audio_to_text::ws::ws_streaming;
 
+use actix_files::Files;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use std::str::FromStr;
-use actix_files::Files;
 
 #[actix_web::main]
 async fn main() -> Result<(), anyhow::Error> {
+    #[cfg(feature = "enable-dotenv")]
     let _ = dotenv::dotenv();
     logger::build_env_logger();
 
@@ -34,8 +35,8 @@ async fn main() -> Result<(), anyhow::Error> {
             .wrap(Logger::default())
             .service(build_hello_scope())
             .service(build_recognize_scope())
+            .service(build_swagger_service())
             .service(Files::new("/static", ".").show_files_listing())
-            .route("/ws", web::get().to(ws_streaming))
     })
     .bind((service_host, service_port))?
     .run()

@@ -7,6 +7,15 @@ use actix_multipart::Multipart;
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder};
 
+#[utoipa::path(
+    get,
+    path = "/recognize/file",
+    tag = "Returns html page to upload file",
+    responses(
+        (status = 200, description = "Successful", body = SuccessfulResponse),
+        (status = 400, description = "Server does not available", body = ErrorResponse),
+    ),
+)]
 #[get("/file")]
 pub async fn upload_file_form() -> HttpResponse {
     HttpResponse::build(StatusCode::OK)
@@ -21,6 +30,19 @@ pub async fn recognize_audio_stream_form(_cxt: ContextData) -> impl Responder {
         .body(include_str!("../../static/stream.html"))
 }
 
+#[utoipa::path(
+    post,
+    path = "/recognize/file",
+    tag = "Send audio file to recognize voice text data as with timeframes",
+    request_body(
+        content_type="multipart/formdata",
+        content=Multipart,
+    ),
+    responses(
+        (status = 200, description = "Successful", body = [RecognizeResponse]),
+        (status = 400, description = "Failed while sending post request", body = ErrorResponse),
+    )
+)]
 #[post("/file")]
 pub async fn recognize_audio(
     cxt: ContextData,
@@ -36,53 +58,19 @@ pub async fn recognize_audio(
     }
 }
 
-async fn extract_multiform_data(mut payload: Multipart) -> Result<String, anyhow::Error> {
-    while let Ok(Some(mut field)) = payload.try_next().await {
-        let content_type = field.content_disposition();
-        let filename = content_type.get_filename().unwrap();
-        let filepath = format!(
-            "/Users/breadrock/Projects/audio-to-text/upload/{}",
-            filename
-        );
-        let filepath2 = filepath.clone();
-        let create_file_result = web::block(|| File::create(filepath)).await.unwrap();
-        if create_file_result.is_err() {
-            let err = create_file_result.err().unwrap();
-            let msg = format!("Failed while creating tmp file: {}", err);
-            log::error!("{}", msg.as_str());
-            return Err(anyhow::Error::msg(msg));
-        }
-
-        let mut file = create_file_result.unwrap();
-        while let Some(read_chunk_result) = field.next().await {
-            if read_chunk_result.is_err() {
-                let err = read_chunk_result.err().unwrap();
-                let msg = format!("Failed while extracting chunk: {}", err);
-                log::error!("{}", msg);
-                return Err(anyhow::Error::msg(msg));
-            }
-
-            let data = read_chunk_result.unwrap();
-            let file_res = web::block(move || file.write_all(&data).map(|_| file))
-                .await
-                .unwrap();
-
-            if file_res.is_err() {
-                let err = file_res.err().unwrap();
-                let msg = format!("Failed while extracting chunk: {}", err);
-                log::error!("{}", msg);
-                return Err(anyhow::Error::msg(msg));
-            }
-
-            file = file_res.unwrap()
-        }
-
-        return Ok(filepath2);
-    }
-
-    Err(anyhow::Error::msg(
-        "Failed while extracting multiform".to_string(),
-    ))
+#[utoipa::path(
+    post,
+    path = "/recognize/file-text",
+    tag = "Send audio file to recognize voice text data as common text",
+    request_body(
+        content_type="multipart/formdata",
+        content=Multipart,
+    ),
+    responses(
+        (status = 200, description = "Successful", body = RecognizeResponse),
+        (status = 400, description = "Failed while sending post request", body = ErrorResponse),
+    )
+)]
 #[post("file-text")]
 pub async fn recognize_audio_full_text(
     cxt: ContextData,

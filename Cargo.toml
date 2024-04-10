@@ -27,3 +27,11 @@ features = ["derive"]
 [dependencies.tokio]
 version = "^1.37"
 features = ["full"]
+
+[dependencies.utoipa]
+version = "^4.2"
+features = ["actix_extras"]
+
+[dependencies.utoipa-swagger-ui]
+version = "^6.0"
+features = ["actix-web"]

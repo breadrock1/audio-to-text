@@ -2,6 +2,7 @@ use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use utoipa::ToSchema;
 
 #[derive(Debug, Error)]
 pub enum WebError {
@@ -27,7 +28,7 @@ impl From<serde_json::Error> for WebError {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub(crate) struct ErrorResponse {
     pub code: u16,
     pub error: String,
@@ -54,7 +55,7 @@ impl ResponseError for WebError {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub(crate) struct SuccessfulResponse {
     pub code: u16,
     pub message: String,

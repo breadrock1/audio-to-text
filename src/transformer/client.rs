@@ -3,7 +3,9 @@ use crate::transformer::resampler;
 use hound::{WavReader, WavSpec};
 use std::ffi::c_int;
 use std::sync::Arc;
+use tokio::io;
 use tokio::sync::RwLock;
+use utoipa::{IntoParams, ToSchema};
 use whisper_rs::{FullParams, SamplingStrategy};
 use whisper_rs::{WhisperContext, WhisperContextParameters, WhisperError, WhisperState};
 
@@ -30,7 +32,6 @@ impl WhisperClient {
         audio_file: &'a str,
         params: RecognizeParameters<'a>,
     ) -> Result<Vec<RecognizeResponse>, WhisperError> {
-
         let strategy = SamplingStrategy::Greedy { best_of: 1 };
         let mut full_params = FullParams::new(strategy);
 
@@ -49,11 +50,10 @@ impl WhisperClient {
                 WhisperError::DecodeNotComplete
             })?;
 
-        let mut reader = WavReader::open(audio_file_path)
-            .map_err(|err| {
-                log::error!("Failed while reading resampled audio file: {}", err);
-                WhisperError::FailedToDecode
-            })?;
+        let mut reader = WavReader::open(audio_file_path).map_err(|err| {
+            log::error!("Failed while reading resampled audio file: {}", err);
+            WhisperError::FailedToDecode
+        })?;
 
         #[allow(unused_variables)]
         let WavSpec {
@@ -74,11 +74,10 @@ impl WhisperClient {
 
         let mut audio = whisper_rs::convert_integer_to_float_audio(sampled_reader);
         if channels == 2 {
-            audio = whisper_rs::convert_stereo_to_mono_audio(&audio)
-                .map_err(|err| {
-                    log::error!("Failed while converting stereo to mono: {}", err);
-                    WhisperError::DecodeNotComplete
-                })?;
+            audio = whisper_rs::convert_stereo_to_mono_audio(&audio).map_err(|err| {
+                log::error!("Failed while converting stereo to mono: {}", err);
+                WhisperError::DecodeNotComplete
+            })?;
         }
 
         let client = self.client.write().await;
@@ -90,6 +89,16 @@ impl WhisperClient {
             .into_iter()
             .filter_map(|id| Self::extract_segment(&state, id).ok())
             .collect::<Vec<RecognizeResponse>>();
+
+        let removing_result = Self::remove_tmp_files(audio_file).await;
+        if removing_result.is_err() {
+            let err = removing_result.err().unwrap();
+            log::warn!(
+                "Failed while removing temporary file {}: {}",
+                audio_file,
+                err
+            );
+        }
 
         Ok(collected_results)
     }
@@ -108,10 +117,19 @@ impl WhisperClient {
             text: segment,
         })
     }
+
+    async fn remove_tmp_files(file_path: &str) -> Result<bool, io::Error> {
+        let path_to_remove = std::path::Path::new(file_path);
+        match tokio::fs::remove_file(path_to_remove).await {
+            Ok(_) => Ok(true),
+            Err(err) => Err(err),
+        }
+    }
 }
 
 impl Default for WhisperClient {
     fn default() -> Self {
+        #[cfg(feature = "enable-dotenv")]
         let _ = dotenv::dotenv();
         let model_path = std::env::var("WHISPER_MODEL_PATH")
             .expect("Failed while getting whisper model file path...");
@@ -120,7 +138,7 @@ impl Default for WhisperClient {
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, IntoParams, ToSchema)]
 pub(crate) struct RecognizeParameters<'a> {
     pub language: Option<&'a str>,
     pub use_threads: i32,
@@ -147,10 +165,24 @@ impl Default for RecognizeParameters<'_> {
     }
 }
 
-#[derive(serde::Serialize)]
+#[derive(Default, serde::Serialize, ToSchema)]
 pub(crate) struct RecognizeResponse {
     frame_id: i32,
     frame_start: i64,
     frame_end: i64,
     text: String,
+}
+
+impl From<Vec<RecognizeResponse>> for RecognizeResponse {
+    fn from(value: Vec<RecognizeResponse>) -> Self {
+        let mut common_response = RecognizeResponse::default();
+        let common_text = value
+            .into_iter()
+            .map(|rec| rec.text.to_owned())
+            .collect::<Vec<String>>()
+            .join(" ");
+
+        common_response.text = common_text;
+        common_response
+    }
 }
