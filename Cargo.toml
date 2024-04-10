@@ -3,13 +3,17 @@ name = "audio-to-text"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+enable-dotenv    = ["dep:dotenv"]
+enable-streaming = ["dep:actix-ws"]
+default          = []
+
 [dependencies]
 actix-files = "^0.6"
 actix-multipart = "^0.6"
 actix-web = "^4.5"
-actix-ws = "^0.2"
 anyhow = "^1.0"
-dotenv = "^0.15"
+actix-cors = "^0.7"
 futures-util = "^0.3"
 hound = "^3.5"
 log = "^0.4"
@@ -27,6 +31,10 @@ features = ["derive"]
 [dependencies.tokio]
 version = "^1.37"
 features = ["full"]
+
+[dependencies.dotenv]
+version = "^0.15"
+optional = true
 
 [dependencies.utoipa]
 version = "^4.2"

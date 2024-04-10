@@ -33,6 +33,7 @@ async fn main() -> Result<(), anyhow::Error> {
         App::new()
             .app_data(web::Data::new(whisper_box_cxt))
             .wrap(Logger::default())
+            .wrap(build_cors_policy())
             .service(build_hello_scope())
             .service(build_recognize_scope())
             .service(build_swagger_service())
