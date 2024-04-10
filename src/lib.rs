@@ -32,6 +32,17 @@ pub fn build_recognize_scope() -> Scope {
         .service(recognizer::recognize_audio_stream_form)
 }
 
+pub fn build_websocket_scope() -> Scope {
+    let scope = web::scope("/ws");
+    #[cfg(feature = "enable-streaming")]
+    {
+        use crate::ws::ws_streaming;
+        scope.service(ws_streaming);
+    }
+
+    scope
+}
+
 pub fn build_cors_policy() -> Cors {
     let available_methods = vec!["GET", "POST", "OPTIONS"];
     let available_headers = vec![header::AUTHORIZATION, header::ACCEPT];

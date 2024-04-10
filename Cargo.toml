@@ -36,6 +36,10 @@ features = ["full"]
 version = "^0.15"
 optional = true
 
+[dependencies.actix-ws]
+version = "^0.2"
+optional = true
+
 [dependencies.utoipa]
 version = "^4.2"
 features = ["actix_extras"]

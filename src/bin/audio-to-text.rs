@@ -3,6 +3,7 @@ extern crate audio_to_text;
 use audio_to_text::*;
 use audio_to_text::middleware::logger;
 use audio_to_text::transformer::client::WhisperClient;
+#[cfg(feature = "enable-streaming")]
 use audio_to_text::ws::ws_streaming;
 
 use actix_files::Files;
@@ -36,6 +37,7 @@ async fn main() -> Result<(), anyhow::Error> {
             .wrap(build_cors_policy())
             .service(build_hello_scope())
             .service(build_recognize_scope())
+            .service(build_websocket_scope())
             .service(build_swagger_service())
             .service(Files::new("/static", ".").show_files_listing())
     })
