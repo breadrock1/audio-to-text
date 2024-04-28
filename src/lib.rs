@@ -1,9 +1,9 @@
 pub mod endpoints;
 pub mod errors;
 pub mod middleware;
+mod swagger;
 pub mod transformer;
 pub mod ws;
-mod swagger;
 
 use crate::endpoints::hello;
 use crate::endpoints::recognizer;
@@ -57,5 +57,5 @@ pub fn build_cors_policy() -> Cors {
 
 pub fn build_swagger_service() -> SwaggerUi {
     let openapi = ApiDoc::openapi();
-    SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone())
+    SwaggerUi::new("/docs/{_:.*}").url("/api-docs/openapi.json", openapi.clone())
 }
