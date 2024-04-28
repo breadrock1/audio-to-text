@@ -32,14 +32,6 @@ features = ["derive"]
 version = "^1.37"
 features = ["full"]
 
-[dependencies.dotenv]
-version = "^0.15"
-optional = true
-
-[dependencies.actix-ws]
-version = "^0.2"
-optional = true
-
 [dependencies.utoipa]
 version = "^4.2"
 features = ["actix_extras"]
@@ -47,3 +39,11 @@ features = ["actix_extras"]
 [dependencies.utoipa-swagger-ui]
 version = "^6.0"
 features = ["actix-web"]
+
+[dependencies.dotenv]
+version = "^0.15"
+optional = true
+
+[dependencies.actix-ws]
+version = "^0.2"
+optional = true

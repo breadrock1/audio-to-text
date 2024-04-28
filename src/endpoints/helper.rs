@@ -8,11 +8,16 @@ use std::io::Write;
 pub(crate) async fn extract_multiform_data(
     mut payload: Multipart,
 ) -> Result<String, anyhow::Error> {
-    while let Ok(Some(mut field)) = payload.try_next().await {
+    while let Some(mut field) = payload
+        .try_next()
+        .await
+        .map_err(|err| extract_error(err, "Failed while processing stream"))?
+    {
         let content_type = field.content_disposition();
         let filename = content_type.get_filename().unwrap();
         let filepath = format!("./upload/{}", filename);
-        let filepath2 = filepath.clone();
+        let filepath_cln = filepath.clone();
+
         let create_file_result = web::block(|| File::create(filepath)).await.unwrap();
         if create_file_result.is_err() {
             let err = create_file_result.err().unwrap();
@@ -41,12 +46,11 @@ pub(crate) async fn extract_multiform_data(
             file = file_res.unwrap()
         }
 
-        return Ok(filepath2);
+        return Ok(filepath_cln);
     }
 
-    Err(anyhow::Error::msg(
-        "Failed while extracting multiform".to_string(),
-    ))
+    let msg = "Failed while extracting multiform".to_string();
+    Err(anyhow::Error::msg(msg))
 }
 
 fn extract_error<T: Debug + Display>(err: T, msg: &str) -> anyhow::Error {
