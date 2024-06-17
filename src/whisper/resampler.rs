@@ -1,6 +1,6 @@
 use tokio::process::Command;
 
-pub(crate) async fn resample_audio_file(
+pub(crate) async fn resample_audio(
     file_path: &str,
     resample_rate: u32,
 ) -> Result<String, std::io::Error> {

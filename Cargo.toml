@@ -1,25 +1,29 @@
 [package]
 name = "audio-to-text"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [features]
 enable-dotenv    = ["dep:dotenv"]
-enable-streaming = ["dep:actix-ws"]
+enable-streaming = []
 default          = []
 
 [dependencies]
-actix-files = "^0.6"
-actix-multipart = "^0.6"
-actix-web = "^4.5"
-anyhow = "^1.0"
+actix = "^0.13"
+actix-codec = "^0.5"
 actix-cors = "^0.7"
+actix-files = "^0.6"
+actix-web = "^4.5"
+actix-web-actors = "^4.3"
+actix-multipart = "^0.6"
+anyhow = "^1.0"
 futures-util = "^0.3"
 hound = "^3.5"
 log = "^0.4"
 pretty_env_logger = "^0.5"
 serde_json = "^1.0"
 thiserror = "^1.0"
+tokio-stream = "^0.1"
 tokio-tungstenite = "^0.21"
 uuid = { version = "^1.8", features = ["v4"] }
 whisper-rs = "^0.10"
@@ -42,8 +46,4 @@ features = ["actix-web"]
 
 [dependencies.dotenv]
 version = "^0.15"
-optional = true
-
-[dependencies.actix-ws]
-version = "^0.2"
 optional = true

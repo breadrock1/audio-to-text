@@ -1,15 +1,15 @@
-use crate::endpoints::helper;
 use crate::errors::{ErrorResponse, SuccessfulResponse, WebError};
-use crate::transformer::client::{RecognizeParameters, RecognizeResponse};
 use crate::{ContextData, RecognizeData};
-
+use crate::whisper::forms::{RecognizeParameters, RecognizeResponse};
+use crate::whisper::helper;
 use actix_multipart::Multipart;
+use actix_web::{get, HttpResponse, post, web};
 use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::web::Query;
 
 #[utoipa::path(
     get,
-    path = "/recognize/file",
+    path = "/recognize/",
     tag = "Upload",
     responses(
         (
@@ -33,8 +33,8 @@ use actix_web::{get, post, web, HttpResponse, Responder};
         ),
     ),
 )]
-#[get("/file")]
-pub async fn upload_file_form() -> HttpResponse {
+#[get("/")]
+pub async fn upload_form() -> HttpResponse {
     HttpResponse::build(StatusCode::OK)
         .content_type("text/html; charset=utf-8")
         .body(include_str!("../../static/upload.html"))
@@ -44,6 +44,13 @@ pub async fn upload_file_form() -> HttpResponse {
     post,
     path = "/recognize/file",
     tag = "Recognize",
+    params(
+        (
+            "concatenate", Query,
+            description = "Concatenate chunked text to common",
+            example = "true"
+        )
+    ),
     request_body(
         content_type = "multipart/formdata",
         content = Multipart,
@@ -82,73 +89,29 @@ pub async fn upload_file_form() -> HttpResponse {
     )
 )]
 #[post("/file")]
-pub async fn recognize_audio(
+pub async fn recognize_file(
     cxt: ContextData,
+    concatenate: Query<bool>,
     payload: Multipart,
-) -> RecognizeData<Vec<RecognizeResponse>> {
+) -> RecognizeData<serde_json::Value> {
     let params = RecognizeParameters::default();
     match helper::extract_multiform_data(payload).await {
         Err(err) => Err(WebError::ResponseError(err.to_string())),
-        Ok(file_path) => match cxt.get_ref().recognize(file_path.as_str(), params).await {
-            Ok(data) => Ok(web::Json(data)),
-            Err(err) => Err(WebError::ResponseError(err.to_string())),
+        Ok(file_path) => {
+            let client = cxt.get_ref().get_client().await;
+            match client.recognize_file(file_path.as_str(), &params).await {
+                Err(err) => Err(WebError::ResponseError(err.to_string())),
+                Ok(data) => {
+                    if concatenate.0 {
+                        let test = RecognizeResponse::from(data);
+                        Ok(web::Json(serde_json::to_value(test).unwrap()))
+                    } else {
+                        Ok(web::Json(serde_json::to_value(data).unwrap()))
+                    }
+                },
+            }
         },
     }
 }
 
-#[utoipa::path(
-    post,
-    path = "/recognize/file-text",
-    tag = "Recognize",
-    request_body(
-        content_type = "multipart/formdata",
-        content = Multipart,
-        example = "To check open url /recognize/file into browser.",
-    ),
-    responses(
-        (
-            status = 200,
-            description = "Successful",
-            body = RecognizeResponse,
-            example = json!([
-                {
-                    "frame_id": 0,
-                    "frame_start": 0,
-                    "frame_end": 10,
-                    "text": "Hello world",
-                }
-            ])
-        ),
-        (
-            status = 400,
-            description = "Failed while recognizing audio file",
-            body = ErrorResponse,
-            example = json!(ErrorResponse {
-                code: 400,
-                error: "Bad Request".to_string(),
-                message: "Failed while recognizing audio file".to_string(),
-            })
-        ),
-    )
-)]
-#[post("file-text")]
-pub async fn recognize_audio_full_text(
-    cxt: ContextData,
-    payload: Multipart,
-) -> RecognizeData<RecognizeResponse> {
-    let params = RecognizeParameters::default();
-    match helper::extract_multiform_data(payload).await {
-        Err(err) => Err(WebError::ResponseError(err.to_string())),
-        Ok(file_path) => match cxt.get_ref().recognize(file_path.as_str(), params).await {
-            Ok(data) => Ok(web::Json(RecognizeResponse::from(data))),
-            Err(err) => Err(WebError::ResponseError(err.to_string())),
-        },
-    }
-}
 
-#[get("/stream")]
-pub async fn recognize_audio_stream_form(_cxt: ContextData) -> impl Responder {
-    HttpResponse::build(StatusCode::OK)
-        .content_type("text/html; charset=utf-8")
-        .body(include_str!("../../static/stream.html"))
-}

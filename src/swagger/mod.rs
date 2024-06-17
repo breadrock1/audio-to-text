@@ -1,9 +1,9 @@
-use crate::endpoints::hello::*;
-use crate::endpoints::recognizer::*;
-use crate::errors::{ErrorResponse, SuccessfulResponse};
-use crate::transformer::client::{RecognizeParameters, RecognizeResponse};
+use crate::errors;
+use crate::healthcheck;
+use crate::whisper;
 
 use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -11,17 +11,16 @@ use utoipa::OpenApi;
         description="There are swagger docs of audio-to-text service endpoints."
     ),
     paths(
-        hello,
-        upload_file_form,
-        recognize_audio,
-        recognize_audio_full_text,
+        healthcheck::routes::check_health,
+        whisper::routes::upload_form,
+        whisper::routes::recognize_file,
     ),
     components(
         schemas(
-            ErrorResponse,
-            SuccessfulResponse,
-            RecognizeParameters,
-            RecognizeResponse,
+            errors::ErrorResponse,
+            errors::SuccessfulResponse,
+            whisper::forms::RecognizeParameters,
+            whisper::forms::RecognizeResponse,
         )
     ),
     tags ((
@@ -30,3 +29,8 @@ use utoipa::OpenApi;
     ))
 )]
 pub struct ApiDoc;
+
+pub fn build_scope() -> SwaggerUi {
+    let openapi = ApiDoc::openapi();
+    SwaggerUi::new("/docs/{_:.*}").url("/api-docs/openapi.json", openapi.clone())
+}

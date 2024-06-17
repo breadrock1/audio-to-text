@@ -1,8 +1,8 @@
 use crate::errors::{ErrorResponse, SuccessfulResponse};
-use crate::transformer::client::WhisperClient;
+use crate::whisper::client_async::WhisperAsyncClient;
 
-use actix_web::web::Data;
 use actix_web::{get, HttpResponse};
+use actix_web::web::Data;
 
 #[utoipa::path(
     get,
@@ -31,7 +31,7 @@ use actix_web::{get, HttpResponse};
     ),
 )]
 #[get("/")]
-pub async fn hello(cxt: Data<Box<WhisperClient>>) -> HttpResponse {
+pub(crate) async fn check_health(cxt: Data<Box<WhisperAsyncClient>>) -> HttpResponse {
     let _client = cxt.get_ref();
     SuccessfulResponse::ok_response("Ok")
 }
